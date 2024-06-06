@@ -1,0 +1,279 @@
+SELECT * 
+FROM superstore.samplesuperstore;
+----------------------------------------------------------------------------------------------------------------
+
+-- DATA CLEANING 
+
+----------------------------------------------------------------------------------------------------------------
+
+-- Renaming columns 
+
+ALTER TABLE  superstore.samplesuperstore
+RENAME COLUMN `Ship Mode` TO `Ship_mode` ;
+
+ALTER TABLE superstore.samplesuperstore
+RENAME COLUMN `Postal Code` TO `Postal_code`; 
+
+ALTER TABLE superstore.samplesuperstore
+RENAME COLUMN `Sub-Category` TO `Sub_category`;
+
+-- Checking number of records
+
+SELECT COUNT(*) 
+FROM superstore.samplesuperstore;
+
+-- Identifying duplicates 
+
+SELECT *,
+	ROW_NUMBER() OVER (
+    PARTITION BY Ship_mode, Segment, Country, City, State, Postal_code, Region, Category, Sub_category, Sales, Quantity, Discount, Profit) AS row_num
+FROM superstore.samplesuperstore;
+
+-- Identifying duplicates using CTE statement 
+WITH row_table AS
+(
+	SELECT *,
+	ROW_NUMBER() OVER (
+    PARTITION BY Ship_mode, Segment, Country, City, State, Postal_code, Region, Category, Sub_category, Sales, Quantity, Discount, Profit) AS row_num
+FROM superstore.samplesuperstore)
+SELECT *
+FROM row_table
+WHERE row_num >1; 
+
+-- Identifying duplicates using subquery 
+SELECT *
+FROM (SELECT *,
+	ROW_NUMBER() OVER (
+    PARTITION BY Ship_mode, Segment, Country, City, State, Postal_code, Region, Category, Sub_category, Sales, Quantity, Discount, Profit) AS row_num
+	FROM superstore.samplesuperstore) AS row_num_table
+WHERE row_num >1; 
+
+-- Removing duplicates 
+
+WITH row_table AS
+(
+	SELECT *,
+	ROW_NUMBER() OVER (
+    PARTITION BY Ship_mode, Segment, Country, City, State, Postal_code, Region, Category, Sub_category, Sales, Quantity, Discount, Profit) AS row_num
+FROM superstore.samplesuperstore
+)
+DELETE FROM samplesuperstore
+WHERE EXISTS (
+	SELECT 1
+    FROM row_table
+    WHERE samplesuperstore.Ship_mode = row_table.Ship_mode
+    AND samplesuperstore.Segment = row_table.Segment
+    AND samplesuperstore.Country = row_table.Country
+	AND samplesuperstore.City = row_table.City
+    AND samplesuperstore.State = row_table.State
+    AND samplesuperstore.Postal_code = row_table.Postal_code
+    AND samplesuperstore.Region = row_table.Region
+    AND samplesuperstore.Category = row_table.Category
+    AND samplesuperstore.Sub_category = row_table.Sub_category
+    AND samplesuperstore.Sales = row_table.Sales
+    AND samplesuperstore.Quantity = row_table.Quantity
+    AND samplesuperstore.Discount = row_table.Discount
+    AND samplesuperstore.Profit = row_table.Profit
+    AND row_table.row_num > 1);
+    
+SELECT *
+FROM samplesuperstore;
+    
+ -- Checking for missing or misspelling values 
+    
+SELECT DISTINCT(ship_mode)
+FROM samplesuperstore; -- 4 ship modes 
+    
+SELECT DISTINCT(segment)
+FROM samplesuperstore; -- 3 segments
+    
+SELECT DISTINCT(city)
+FROM samplesuperstore
+ORDER BY city; -- Arlington, Buffalo, Edmond(s), lawton/layton,
+    
+SELECT * 
+FROM samplesuperstore
+WHERE city LIKE 'La%ton'
+ORDER BY city
+;
+    
+SELECT DISTINCT(Region)
+FROM samplesuperstore
+ORDER BY region; -- 4 regions (C,E,S,W) 
+    
+SELECT DISTINCT(category)
+FROM samplesuperstore; -- 3 categories
+    
+SELECT DISTINCT(sub_category)
+FROM samplesuperstore
+ORDER BY Sub_category; 
+    
+SELECT *
+FROM samplesuperstore
+WHERE Profit IS NULL
+   OR Profit = ''; 
+    
+ -- Standardizing data 
+   
+SELECT ROUND(sales,2)
+FROM samplesuperstore ;
+   
+UPDATE samplesuperstore
+SET Sales = ROUND(Sales,2) ;
+   
+SELECT ROUND(Profit,2)
+FROM samplesuperstore ;
+
+UPDATE samplesuperstore
+SET Profit = ROUND(Profit,2) ;
+
+SELECT *
+FROM samplesuperstore ;
+
+----------------------------------------------------------------------------------------------------------------------
+-- DATA EXPLORATORY 
+----------------------------------------------------------------------------------------------------------------------
+
+
+-- Checking total records 
+
+SELECT COUNT(*)
+FROM samplesuperstore ;
+
+-- Looking at most popular ship mode 
+SELECT 
+	Ship_mode,
+  COUNT(Ship_mode) AS ship_mode_count
+FROM samplesuperstore
+GROUP BY Ship_mode 
+ORDER BY ship_mode_count DESC;
+
+SELECT *
+FROM samplesuperstore ;
+
+-- Looking at popular ship mode by segment 
+SELECT 
+	Segment,
+	Ship_mode,
+  COUNT(Ship_mode) AS ship_mode_count
+FROM samplesuperstore
+GROUP BY Segment, Ship_mode
+ORDER BY Ship_mode_count DESC;
+
+-- Looking at overall sales & profit 
+
+SELECT 
+	ROUND(SUM(Sales),2) AS Total_sales,
+  ROUND(SUM(Profit),2) AS Total_profit
+FROM samplesuperstore ;
+
+
+SELECT *
+FROM samplesuperstore ;
+
+-- Looking at total sales by segment 
+SELECT 
+	Segment,
+	ROUND(SUM(Sales),2) AS Total_sales
+FROM samplesuperstore 
+GROUP BY Segment
+ORDER BY Total_sales DESC;
+
+-- Looking at average sales by segment 
+
+SELECT 
+	Segment,
+  COUNT(*) AS count_sales,
+	ROUND(AVG(Sales),2) AS Average_sales
+FROM samplesuperstore 
+GROUP BY Segment;
+
+-- Looking at average sales by state and region
+SELECT 
+	State,
+  Region,
+  COUNT(*) AS count_sales,
+  ROUND(SUM(Sales),2) AS Total_sales,
+	ROUND(AVG(Sales),2) AS Average_sales,
+  ROUND(SUM(Profit),2) AS Total_profit
+FROM samplesuperstore 
+GROUP BY State, Region
+ORDER BY Count_sales DESC;
+
+SELECT *
+FROM samplesuperstore
+;
+
+-- Looking at highest sales by category 
+SELECT 
+    Category, 
+    COUNT(*) AS Transactions_count, 
+    ROUND(SUM(Sales), 2) AS Total_sales
+FROM samplesuperstore
+GROUP BY Category
+ORDER BY Total_sales DESC;
+
+
+-- Highest sales by sub_category 
+SELECT 
+    Sub_category, 
+    COUNT(*) AS Transactions_count, 
+    ROUND(SUM(Sales), 2) AS Total_sales
+FROM samplesuperstore
+GROUP BY Sub_category
+ORDER BY Total_sales DESC;
+
+-- Best selling sub_categories
+SELECT 
+	  Category,
+    Sub_category, 
+    SUM(Quantity) AS Quantity_sold, 
+    ROUND(SUM(Sales), 2) AS Total_sales
+FROM samplesuperstore
+GROUP BY Category, Sub_category
+-- HAVING Category = 'Furniture'
+ORDER BY Quantity_sold DESC
+-- LIMIT 10
+;
+
+-- Best selling categories & sub_categories by region & state
+SELECT 
+	  Region,
+    State,
+  	Category,
+    Sub_category, 
+    SUM(Quantity) AS Quantity_sold, 
+    ROUND(SUM(Sales), 2) AS Total_sales,
+    ROUND(SUM(Profit),2) AS Total_profit
+FROM samplesuperstore
+GROUP BY Region, State, Category, Sub_category
+-- HAVING Category = 'Furniture'
+ORDER BY Quantity_sold DESC
+-- LIMIT 10
+;
+
+-- Profit by category 
+
+SELECT *
+FROM samplesuperstore ;
+
+SELECT 
+		CASE 
+			WHEN Profit > 0 THEN 'Profit > 0'
+      WHEN Profit = 0 THEN 'Profit = 0'
+      ELSE 'Profit < 0'
+		END AS profit_category,
+    COUNT(*) as transaction_count
+	FROM samplesuperstore 
+  GROUP BY profit_category;
+    
+-- Looking at discount impact on sales & profit
+
+SELECT 
+	  ROUND(Discount * 100, 0) AS Discount_Percentage,
+    COUNT(*) AS Number_of_Orders,
+    ROUND(SUM(Sales), 2) AS Total_Sales,
+    ROUND(SUM(Profit), 2) AS Total_Profit
+FROM samplesuperstore
+GROUP BY Discount_Percentage
+ORDER BY Discount_Percentage;
