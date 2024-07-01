@@ -1,0 +1,142 @@
+SELECT * FROM portfolio.hrdata;
+
+ALTER TABLE hrdata
+RENAME COLUMN `empl_no` to `emp_no` ; 
+
+-- Checking no of employees
+SELECT SUM(employee_count) AS employee_count
+FROM hrdata ;
+
+SELECT COUNT(emp_no) AS employee_count
+FROM hrdata ;
+
+-- Attrition Count and Rate 
+SELECT COUNT(attrition) AS attrition_count 
+FROM hrdata
+WHERE attrition = "yes" ;
+
+SELECT 
+	ROUND(((SELECT COUNT(attrition) FROM hrdata WHERE attrition = "yes") / 
+    COUNT(emp_no))*100,2) AS attrition_rate
+FROM hrdata
+;
+
+-- Count of active employees
+SELECT COUNT(emp_no) AS active_employees 
+FROM hrdata
+WHERE attrition = "no";
+
+-- or 
+SELECT COUNT(emp_no) - (SELECT COUNT(emp_no) FROM hrdata WHERE attrition = "yes")
+FROM hrdata
+;
+-- Or 
+SELECT SUM(active_employee) AS active_employees
+FROM hrdata; 
+
+-- Checking employees avg age 
+SELECT ROUND(AVG(age),0) AS avg_employees_age
+FROM hrdata
+;
+-- Attrition by gender 
+SELECT gender,
+	COUNT(attrition) AS attrition_count
+FROM hrdata
+WHERE attrition = "yes"
+GROUP BY gender 
+ORDER BY COUNT(attrition) DESC; 
+
+-- fr vizs
+-- Attrition by department  
+SELECT department,
+	COUNT(attrition) AS attrition_count
+FROM hrdata
+WHERE attrition = "yes"
+GROUP BY department  
+ORDER BY COUNT(attrition) DESC; 
+
+SELECT department,
+	COUNT(attrition) AS attrition_count,
+    ROUND(COUNT(attrition) / (SELECT COUNT(attrition) FROM hrdata WHERE attrition = "yes")*100,2) AS percentage_attrition
+FROM hrdata
+WHERE attrition = "yes"
+GROUP BY department  
+ORDER BY COUNT(attrition) DESC; 
+
+-- No of employees by age 
+
+SELECT 
+	age,
+    COUNT(emp_no) AS employee_count
+FROM hrdata
+GROUP BY age
+ORDER BY age; 
+
+-- satisfaction rate by job role 
+SELECT 
+	job_role,
+    SUM(CASE WHEN job_satisfaction = 1 THEN 1 ELSE 0 END) AS satisfaction_1,
+    SUM(CASE WHEN job_satisfaction = 2 THEN 1 ELSE 0 END) AS satisfaction_2,
+    SUM(CASE WHEN job_satisfaction = 3 THEN 1 ELSE 0 END) AS satisfaction_3,
+    SUM(CASE WHEN job_satisfaction = 4 THEN 1 ELSE 0 END) AS satisfaction_4,
+    COUNT(job_satisfaction) AS total
+FROM hrdata
+GROUP BY job_role
+ORDER BY job_role
+; 
+
+
+
+-- Educational field wise attrition 
+SELECT education_field,
+	COUNT(attrition) AS attrition_count
+FROM hrdata
+WHERE attrition = "yes"
+GROUP BY education_field  
+ORDER BY COUNT(attrition) DESC; 
+
+-- Attrition rate by gender and age groups
+SELECT age_band,
+	gender,
+	COUNT(attrition) AS attrition_count,
+	ROUND(COUNT(attrition) / (SELECT COUNT(attrition) FROM hrdata WHERE attrition = "yes")*100,2) AS percentage_attriti
+FROM hrdata
+WHERE attrition = "yes"
+GROUP BY age_band, gender 
+ORDER BY age_band, gender;
+
+-- Data Validation Check
+-- Checking if "education" filter works 
+
+SELECT COUNT(emp_no) AS employee_count
+FROM hrdata 
+WHERE education = "high school";
+
+-- check if department filter works
+SELECT COUNT(emp_no) AS employee_count
+FROM hrdata 
+WHERE department = "hr"
+-- WHERE department = "sales"
+;
+SELECT COUNT(attrition) AS attrition_count 
+FROM hrdata
+WHERE attrition = "yes" 
+AND education = "Bachelor's degree"
+AND department = "hr";
+
+SELECT department,
+	COUNT(attrition) AS attrition_count,
+    ROUND(COUNT(attrition) / (SELECT COUNT(attrition) FROM hrdata WHERE attrition = "yes" AND gender = "female")*100,2) AS percentage_attrition
+FROM hrdata
+WHERE attrition = "yes"
+AND gender = "female"
+GROUP BY department  
+ORDER BY COUNT(attrition) DESC; 
+
+SELECT education_field,
+	COUNT(attrition) AS attrition_count
+FROM hrdata
+WHERE attrition = "yes"
+AND department = "sales"
+GROUP BY education_field  
+ORDER BY COUNT(attrition) DESC; 
